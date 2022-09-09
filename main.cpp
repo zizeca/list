@@ -1,3 +1,14 @@
+/**
+ * @file main.cpp
+ * @author Enver Kulametov (zizu.meridian@gmail.com)
+ * @brief Test file for List.hpp
+ * @version 0.1
+ * @date 2022-09-09
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -6,12 +17,8 @@
 
 struct A {
   std::string str;
-  explicit A(std::string str = "default") : str(str) {
-    std::cout << "A(\"" << str << "\")\n";
-  }
-  A(const A& o) : str(o.str) {
-    std::cout << "A(\"" << str << "\") copy ctor\n";
-  }
+  explicit A(const std::string &str) : str(str) { std::cout << "A(\"" << str << "\")\n"; }
+  A(const A& o) : str(o.str) { std::cout << "A(\"" << str << "\") copy ctor\n"; }
   A(A&& o) : str(std::move(o.str)) {
     std::cout << "A(\"" << str << "\") move ctor \n";
     str += "moved";
@@ -21,24 +28,17 @@ struct A {
   void print() const { std::cout << "str =\"" << str << "\"\n"; }
 };
 
-int main() {
-  /*
-  List<int> l;
-  l.push_back(1);
-  l.push_back(2);
-  l.push_back(3);
-  l.push_back(4);
-  l.pop_back();
-  l.push_back(5);
-  l.push_back(6);
-  l.push_front(10);
-  std::reverse(l.begin(), l.end());
 
-  for (auto it = l.begin(); it != l.end(); ++it){
-    std::cout << *it << std::endl;
-  }
-*/
+struct B {
+  int i;
+  explicit B(int i = 0) : i(i) { std::cout << "B(" << i << ")\n"; }
+  B(const B& o) : i(o.i) { std::cout << "B(" << i << ") copy ctor\n"; }
+  B(B&& o) : i(std::move(o.i)) { std::cout << "B(" << i << ") move ctor \n"; }
+  ~B() { std::cout << "~B(" << i << ") destructor\n"; }
+  void print() const { std::cout << "i =" << i << "\n"; }
+};
 
+void testAobj() {
   List<A> l;
   std::cout << "\npush back test\n";
   for (int i = 0; i < 5; i++) {
@@ -47,7 +47,37 @@ int main() {
   l.push_front(A("push_front =-1"));
 
   {
-    A ct("push_back with copyctor");
+    const A ct("push_back with copyctor");
+    l.push_back(ct);
+  }
+
+  std::cout << "\ncall print with const_iterator\n";
+  //*
+  for (auto it = l.cbegin(); it != l.cend(); ++it) {
+    it->print();  // print use const_iterator
+  }
+  //*/
+}
+
+void testAobj_1() {
+  List<A> l;
+  std::cout << "\npush back test\n";
+
+  l.push_back(A("test"));
+  A a("test2");
+  l.push_back(a);
+}
+
+void testBobj() {
+  List<B> l;
+  std::cout << "\npush back test\n";
+  for (int i = 0; i < 5; i++) {
+    l.push_back(B(i));
+  }
+  l.push_front(B(-1));
+
+  {
+    const B ct(50);
     l.push_back(ct);
   }
 
@@ -55,17 +85,64 @@ int main() {
   for (auto it = l.cbegin(); it != l.cend(); it++) {
     it->print();  // print use const_iterator
   }
+}
 
-  std::cout << "\n unique_ptr test\n";
-  List<std::unique_ptr<A>> lu;
-  {
-    std::unique_ptr<A> uptr = std::make_unique<A>("uptr move");
-    lu.push_back(std::move(uptr));
+void testBobj_1() {
+  List<B> l;
+  //*
+  for (size_t i = 0; i < 10; i++) {
+    l.push_back(B(i));
+  }
+  //*/
+
+  for (auto it = l.cbegin(); it != l.cend(); ++it) {
+    it->print();
+  }
+  l.push_back(B(1));
+  l.pop_back();
+  std::cout << "pop\n";
+}
+
+void testuptr() {
+  std::unique_ptr<A> p(new A("uptr"));
+
+  List<std::unique_ptr<A>> l;
+  l.push_back(std::move(p));
+}
+
+void testVect() {
+  std::vector<B> v(5);
+  std::vector<B> v2(5);
+
+  std::cout << "\n\t fill vector\n";
+  for (size_t i = 0; i < 5; i++) {
+    v.push_back(B(i));
   }
 
-  List<std::unique_ptr<A>> lu2 = std::move(lu);
+  for (size_t i = 5; i < 10; i++) {
+    v.push_back(B(i));
+  }
 
-  lu2.back()->print();
+  std::cout << "push to list\n";
+  List<std::vector<B>> l;
+  l.push_back(v2);
+  l.push_front(v);
+
+  std::cout << "print list\n";
+  for (auto it = l.cbegin(); it != l.cend(); it++) {
+    for (auto j = it->cbegin(); j != it->cend(); ++j) {
+      j->print();
+    }
+  }
+}
+
+int main() {
+  testAobj_1();
+  testBobj_1();
+  testuptr();
+  testAobj();
+  testVect();
+
 
   std::cout << "\nend test\n";
 
