@@ -224,25 +224,35 @@ List<T, Allocator>::iterator List<T, Allocator>::begin() noexcept {
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::const_iterator List<T, Allocator>::cbegin() const noexcept {
+inline List<T, Allocator>::const_iterator List<T, Allocator>::begin() const noexcept {
+  return cbegin();
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::const_iterator List<T, Allocator>::cbegin() const noexcept {
   const_iterator i(p_head->next);
   return i;
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::iterator List<T, Allocator>::end() noexcept {
+inline List<T, Allocator>::iterator List<T, Allocator>::end() noexcept {
   iterator i(p_head);
   return i;
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::const_iterator List<T, Allocator>::cend() const noexcept {
+inline List<T, Allocator>::const_iterator List<T, Allocator>::end() const noexcept {
+  return cend();
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::const_iterator List<T, Allocator>::cend() const noexcept {
   const_iterator i(p_head);
   return i;
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::push_back(const T& t) {
+inline void List<T, Allocator>::push_back(const T& t) {
   Node* tmp = p_head->prev;
   // tmp->next = new Node{t, tmp, p_head};
   NODE_CREATE(tmp->next, t, tmp, p_head);
@@ -251,7 +261,7 @@ void List<T, Allocator>::push_back(const T& t) {
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::push_back(T&& t) {
+inline void List<T, Allocator>::push_back(T&& t) {
   Node* tmp = p_head->prev;
   // tmp->next = new Node{std::move(t), tmp, p_head};
   NODE_CREATE(tmp->next, std::move(t), tmp, p_head);
@@ -260,7 +270,7 @@ void List<T, Allocator>::push_back(T&& t) {
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::pop_back() {
+inline void List<T, Allocator>::pop_back() {
   if (p_head->next == p_head && p_head->prev == p_head) return;
   Node* d = p_head->prev;
   d->prev->next = p_head;
@@ -271,7 +281,7 @@ void List<T, Allocator>::pop_back() {
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::push_front(const T& t) {
+inline void List<T, Allocator>::push_front(const T& t) {
   Node* tmp = p_head->next;
   // tmp->prev = new Node{t, p_head, tmp};
   NODE_CREATE(tmp->prev, t, p_head, tmp);
@@ -280,7 +290,7 @@ void List<T, Allocator>::push_front(const T& t) {
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::push_front(T&& t) {
+inline void List<T, Allocator>::push_front(T&& t) {
   Node* tmp = p_head->next;
   // tmp->prev = new Node{std::move(t), p_head, tmp};
   NODE_CREATE(tmp->prev, std::move(t), p_head, tmp);
@@ -289,7 +299,7 @@ void List<T, Allocator>::push_front(T&& t) {
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::pop_front() {
+inline void List<T, Allocator>::pop_front() {
   if (p_head->next == p_head && p_head->prev == p_head) return;
   Node* d = p_head->next;
   d->next->prev = p_head;
@@ -300,22 +310,22 @@ void List<T, Allocator>::pop_front() {
 }
 
 template <class T, class Allocator>
-T& List<T, Allocator>::front() {
+inline T& List<T, Allocator>::front() {
   return p_head->next->t;
 }
 
 template <class T, class Allocator>
-T& List<T, Allocator>::back() {
+inline T& List<T, Allocator>::back() {
   return p_head->prev->t;
 }
 
 template <class T, class Allocator>
-size_t List<T, Allocator>::size() const noexcept {
+inline size_t List<T, Allocator>::size() const noexcept {
   return sz;
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::clear() noexcept {
+inline void List<T, Allocator>::clear() noexcept {
   while (sz) this->pop_back();
 }
 
