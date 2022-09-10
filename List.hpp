@@ -21,7 +21,7 @@ class List {
  private:
   // container
   struct Node {
-    T t;
+    T value;
     Node* prev;
     Node* next;
   };
@@ -58,6 +58,7 @@ class List {
   /// iterator
   template <bool _is_const>
   class common_iterator {
+    friend class List;
    public:
     using iterator_category = std::bidirectional_iterator_tag;
     using value_type = std::conditional_t<_is_const, const T, T>;
@@ -74,8 +75,8 @@ class List {
     explicit common_iterator(const std::remove_const_t<node_pointer> node) : ptr(node) {}
     common_iterator(const common_iterator& other) = default;
 
-    reference operator*() const;                          // { return ptr->t; }
-    pointer operator->() const;                           // { return &(ptr->t); }
+    reference operator*() const;                          // { return ptr->value; }
+    pointer operator->() const;                           // { return &(ptr->value); }
     bool operator==(const common_iterator& other) const;  // { return ptr == other.ptr;}
     bool operator!=(const common_iterator& other) const;  // { return !(*this == other); }
     common_iterator& operator++();                        // {ptr = ptr->next; return *this;}
@@ -96,11 +97,12 @@ class List {
 
   // end iterator
 
-  void push_back(const T& t);
-  void push_back(T&& t);
+  iterator insert(iterator pos, const T& value);
+  void push_back(const T& value);
+  void push_back(T&& value);
   void pop_back();
-  void push_front(const T& t);
-  void push_front(T&& t);
+  void push_front(const T& value);
+  void push_front(T&& value);
   void pop_front();
   T& front();
   T& back();
@@ -110,8 +112,6 @@ class List {
 
 template <class T, class Allocator>
 List<T, Allocator>::List() {
-  // p_head = reinterpret_cast<Node*>(new int8_t[sizeof(Node)]);
-  // p_head = m_alloc.allocate(1u);
   p_head = traits_t::allocate(m_alloc, 1u);
   p_head->next = p_head;
   p_head->prev = p_head;
@@ -142,7 +142,6 @@ T& List<T, Allocator>::operator=(const List& other) {
 template <class T, class Allocator>
 T& List<T, Allocator>::operator=(List&& other) {
   if (other == *this) return *this;
-
   std::swap(other.p_head, p_head);
   std::swap(other.sz, sz);
 }
@@ -150,8 +149,6 @@ T& List<T, Allocator>::operator=(List&& other) {
 template <class T, class Allocator>
 List<T, Allocator>::~List() {
   clear();
-  // m_alloc.deallocate(p_head, 1u);
-  // delete[] reinterpret_cast<int8_t*>(p_head);
   traits_t::deallocate(m_alloc, p_head, 1u);
 }
 
@@ -159,14 +156,14 @@ template <class T, class Allocator>
 template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>::reference
 List<T, Allocator>::common_iterator<_is_const>::operator*() const {
-  return ptr->t;
+  return ptr->value;
 }
 
 template <class T, class Allocator>
 template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>::pointer
 List<T, Allocator>::common_iterator<_is_const>::operator->() const {
-  return &(ptr->t);
+  return &(ptr->value);
 }
 
 template <class T, class Allocator>
@@ -252,19 +249,26 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::cend() const noexc
 }
 
 template <class T, class Allocator>
-inline void List<T, Allocator>::push_back(const T& t) {
+inline List<T, Allocator>::iterator List<T, Allocator>::insert(
+    typename List<T, Allocator>::iterator pos, const T& value) {
+  Node* prev = pos.ptr->prev;
+  NODE_CREATE(pos.ptr->prev, value, prev, pos.ptr);
+  prev->next = pos.ptr->prev;
+  return iterator(pos.ptr->prev);
+}
+
+template <class T, class Allocator>
+inline void List<T, Allocator>::push_back(const T& value) {
   Node* tmp = p_head->prev;
-  // tmp->next = new Node{t, tmp, p_head};
-  NODE_CREATE(tmp->next, t, tmp, p_head);
+  NODE_CREATE(tmp->next, value, tmp, p_head);
   p_head->prev = tmp->next;
   ++sz;
 }
 
 template <class T, class Allocator>
-inline void List<T, Allocator>::push_back(T&& t) {
+inline void List<T, Allocator>::push_back(T&& value) {
   Node* tmp = p_head->prev;
-  // tmp->next = new Node{std::move(t), tmp, p_head};
-  NODE_CREATE(tmp->next, std::move(t), tmp, p_head);
+  NODE_CREATE(tmp->next, std::move(value), tmp, p_head);
   p_head->prev = tmp->next;
   ++sz;
 }
@@ -275,25 +279,22 @@ inline void List<T, Allocator>::pop_back() {
   Node* d = p_head->prev;
   d->prev->next = p_head;
   p_head->prev = d->prev;
-  // delete d;
   NODE_DESTROY(d);
   --sz;
 }
 
 template <class T, class Allocator>
-inline void List<T, Allocator>::push_front(const T& t) {
+inline void List<T, Allocator>::push_front(const T& value) {
   Node* tmp = p_head->next;
-  // tmp->prev = new Node{t, p_head, tmp};
-  NODE_CREATE(tmp->prev, t, p_head, tmp);
+  NODE_CREATE(tmp->prev, value, p_head, tmp);
   p_head->next = tmp->prev;
   ++sz;
 }
 
 template <class T, class Allocator>
-inline void List<T, Allocator>::push_front(T&& t) {
+inline void List<T, Allocator>::push_front(T&& value) {
   Node* tmp = p_head->next;
-  // tmp->prev = new Node{std::move(t), p_head, tmp};
-  NODE_CREATE(tmp->prev, std::move(t), p_head, tmp);
+  NODE_CREATE(tmp->prev, std::move(value), p_head, tmp);
   p_head->next = tmp->prev;
   ++sz;
 }
@@ -304,7 +305,6 @@ inline void List<T, Allocator>::pop_front() {
   Node* d = p_head->next;
   d->next->prev = p_head;
   p_head->next = d->next;
-  // delete d;
   NODE_DESTROY(d);
   --sz;
 }

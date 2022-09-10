@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <list>
 
 #include "List.hpp"
 
@@ -49,7 +50,15 @@ void testAobj() {
   {
     const A ct("push_back with copyctor");
     l.push_back(ct);
+  
   }
+
+  auto ins = l.begin();
+  ins++;
+  ins++;
+
+  ins = l.insert(ins, A("Insert"));
+  ins->print();
 
   std::cout << "\ncall print with const_iterator\n";
   //*
