@@ -59,6 +59,7 @@ class List {
   template <bool _is_const>
   class common_iterator {
     friend class List;
+
    public:
     using iterator_category = std::bidirectional_iterator_tag;
     using value_type = std::conditional_t<_is_const, const T, T>;
@@ -72,8 +73,10 @@ class List {
 
    public:
     common_iterator() = default;
-    explicit common_iterator(const std::remove_const_t<node_pointer> node) : ptr(node) {}
+    explicit common_iterator(Node* node) : ptr(node) {}
     common_iterator(const common_iterator& other) = default;
+    template <bool B>
+    common_iterator(const common_iterator<B>& other); // = default;
 
     reference operator*() const;                          // { return ptr->value; }
     pointer operator->() const;                           // { return &(ptr->value); }
@@ -83,6 +86,9 @@ class List {
     common_iterator operator++(int);  // {common_iterator ret = *this; ptr = ptr->next; return ret;}
     common_iterator& operator--();    // {ptr = ptr->prev; return *this;}
     common_iterator operator--(int);  // {common_iterator ret = *this; ptr = ptr->prev; return ret;}
+
+    template<bool B>
+    operator common_iterator<B>();
   };
 
   using iterator = common_iterator<false>;
@@ -97,7 +103,8 @@ class List {
 
   // end iterator
 
-  iterator insert(iterator pos, const T& value);
+  iterator insert(const_iterator pos, const T& value);
+
   void push_back(const T& value);
   void push_back(T&& value);
   void pop_back();
@@ -150,6 +157,14 @@ template <class T, class Allocator>
 List<T, Allocator>::~List() {
   clear();
   traits_t::deallocate(m_alloc, p_head, 1u);
+}
+
+template <class T, class Allocator>
+template <bool _is_const>
+template <bool B>
+List<T, Allocator>::common_iterator<_is_const>::common_iterator(
+    const List<T, Allocator>::common_iterator<B>& other) {
+  ptr = other.ptr;
 }
 
 template <class T, class Allocator>
@@ -207,6 +222,13 @@ List<T, Allocator>::common_iterator<_is_const>::operator--() {
 
 template <class T, class Allocator>
 template <bool _is_const>
+template <bool B>
+List<T, Allocator>::common_iterator<_is_const>::operator List<T, Allocator>::common_iterator<B>() {
+  return common_iterator<B>(const_cast<Node*>(ptr));
+}
+
+template <class T, class Allocator>
+template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>
 List<T, Allocator>::common_iterator<_is_const>::operator--(int) {
   common_iterator ret = *this;
@@ -250,11 +272,12 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::cend() const noexc
 
 template <class T, class Allocator>
 inline List<T, Allocator>::iterator List<T, Allocator>::insert(
-    typename List<T, Allocator>::iterator pos, const T& value) {
-  Node* prev = pos.ptr->prev;
-  NODE_CREATE(pos.ptr->prev, value, prev, pos.ptr);
-  prev->next = pos.ptr->prev;
-  return iterator(pos.ptr->prev);
+    typename List<T, Allocator>::const_iterator pos, const T& value) {
+  iterator it(pos);
+  Node* prev = it.ptr->prev;
+  NODE_CREATE(it.ptr->prev, value, prev, it.ptr);
+  prev->next = it.ptr->prev;
+  return iterator(it.ptr->prev);
 }
 
 template <class T, class Allocator>

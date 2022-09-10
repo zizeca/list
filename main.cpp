@@ -25,6 +25,17 @@ struct A {
     str += "moved";
     o.str = "empty becaus moved";
   }
+  A& operator=(const A& other) {
+    str = other.str;
+    std::cout << " copy assigned " << str << "\n";
+    return *this;
+  }
+  A& operator=(A&& other) {
+    str = std::move(other.str);
+    std::cout << " move assigned " << str << "\n";
+    return *this;
+  }
+
   ~A() { std::cout << "~A(\"" << str << "\") destructor\n"; }
   void print() const { std::cout << "str =\"" << str << "\"\n"; }
 };
