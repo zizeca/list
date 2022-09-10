@@ -4,21 +4,21 @@
  * @brief Test file for List.hpp
  * @version 0.1
  * @date 2022-09-09
- * 
+ *
  * @copyright Copyright (c) 2022
- * 
+ *
  */
 
 #include <algorithm>
 #include <iostream>
-#include <memory>
 #include <list>
+#include <memory>
 
 #include "List.hpp"
 
 struct A {
   std::string str;
-  explicit A(const std::string &str) : str(str) { std::cout << "A(\"" << str << "\")\n"; }
+  explicit A(const std::string& str) : str(str) { std::cout << "A(\"" << str << "\")\n"; }
   A(const A& o) : str(o.str) { std::cout << "A(\"" << str << "\") copy ctor\n"; }
   A(A&& o) : str(std::move(o.str)) {
     std::cout << "A(\"" << str << "\") move ctor \n";
@@ -40,7 +40,6 @@ struct A {
   void print() const { std::cout << "str =\"" << str << "\"\n"; }
 };
 
-
 struct B {
   int i;
   explicit B(int i = 0) : i(i) { std::cout << "B(" << i << ")\n"; }
@@ -49,6 +48,18 @@ struct B {
   ~B() { std::cout << "~B(" << i << ") destructor\n"; }
   void print() const { std::cout << "i =" << i << "\n"; }
 };
+
+void testIteratorCast() {
+  List<A> l;
+  l.push_back(A("1"));
+  l.push_back(A("2"));
+
+  List<A>::iterator it = l.begin();
+  List<A>::const_iterator cit = it;
+  cit->print();
+  List<A>::iterator it2 = cit;
+  it2->print();
+}
 
 void testAobj() {
   List<A> l;
@@ -61,7 +72,6 @@ void testAobj() {
   {
     const A ct("push_back with copyctor");
     l.push_back(ct);
-  
   }
 
   auto ins = l.begin();
@@ -157,12 +167,17 @@ void testVect() {
 }
 
 int main() {
-  testAobj_1();
-  testBobj_1();
-  testuptr();
-  testAobj();
-  testVect();
+  try {
+    testAobj_1();
+    testBobj_1();
+    testuptr();
+    testAobj();
+    testVect();
+    testIteratorCast();
 
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << '\n';
+  }
 
   std::cout << "\nend test\n";
 
