@@ -61,7 +61,6 @@ void testIteratorCast() {
   *it = A("3");
   // List<A>::iterator it2 = cit; // error
   // it2->print();
-
 }
 
 void testAobj() {
@@ -90,7 +89,12 @@ void testAobj() {
   for (auto it = l.cbegin(); it != l.cend(); ++it) {
     it->print();  // print use const_iterator
   }
+  std::cout << "--print reverse iterrator--\n";
+  for (auto it = l.rcbegin(); it != l.rcend(); ++it) {
+    it->print();  // print use const_iterator
+  }
   //*/
+
 }
 
 void testAobj_1() {

@@ -69,13 +69,12 @@ class List {
     using node_pointer = std::conditional_t<_is_const, const Node*, Node*>;
 
    private:
-    node_pointer ptr=nullptr;
+    node_pointer ptr = nullptr;
 
    public:
     common_iterator() = default;
     explicit common_iterator(Node* node) : ptr(node) {}
     common_iterator(const common_iterator& other) = default;
-
 
     reference operator*() const;                          // { return ptr->value; }
     pointer operator->() const;                           // { return &(ptr->value); }
@@ -91,6 +90,8 @@ class List {
 
   using iterator = common_iterator<false>;
   using const_iterator = common_iterator<true>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   iterator begin() noexcept;
   const_iterator begin() const noexcept;
@@ -99,6 +100,12 @@ class List {
   const_iterator end() const noexcept;
   const_iterator cend() const noexcept;
 
+  reverse_iterator rbegin() noexcept;
+  reverse_iterator rend() noexcept;
+  const_reverse_iterator rbegin() const noexcept;
+  const_reverse_iterator rend() const noexcept;
+  const_reverse_iterator rcbegin() const noexcept;
+  const_reverse_iterator rcend() const noexcept;
   // end iterator
 
   iterator insert(const_iterator pos, const T& value);
@@ -212,7 +219,8 @@ List<T, Allocator>::common_iterator<_is_const>::operator--() {
 
 template <class T, class Allocator>
 template <bool _is_const>
-List<T, Allocator>::common_iterator<_is_const>::operator List<T, Allocator>::common_iterator<true>() {
+List<T, Allocator>::common_iterator<_is_const>::operator List<T,
+                                                              Allocator>::common_iterator<true>() {
   return common_iterator<true>(ptr);
 }
 
@@ -260,9 +268,45 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::cend() const noexc
 }
 
 template <class T, class Allocator>
+inline std::reverse_iterator<typename List<T, Allocator>::iterator>
+List<T, Allocator>::rbegin() noexcept {
+  return std::reverse_iterator<iterator>(end());
+}
+
+template <class T, class Allocator>
+inline std::reverse_iterator<typename List<T, Allocator>::const_iterator>
+List<T, Allocator>::rbegin() const noexcept {
+  return std::reverse_iterator<const_iterator>(end());
+}
+
+template <class T, class Allocator>
+inline std::reverse_iterator<typename List<T, Allocator>::const_iterator>
+List<T, Allocator>::rcbegin() const noexcept {
+  return std::reverse_iterator<const_iterator>(cend());
+}
+
+template <class T, class Allocator>
+inline std::reverse_iterator<typename List<T, Allocator>::iterator>
+List<T, Allocator>::rend() noexcept {
+  return std::reverse_iterator<iterator>(begin());
+}
+
+template <class T, class Allocator>
+inline std::reverse_iterator<typename List<T, Allocator>::const_iterator> List<T, Allocator>::rend()
+    const noexcept {
+  return std::reverse_iterator<const_iterator>(begin());
+}
+
+template <class T, class Allocator>
+inline std::reverse_iterator<typename List<T, Allocator>::const_iterator>
+List<T, Allocator>::rcend() const noexcept {
+  return std::reverse_iterator<const_iterator>(cbegin());
+}
+
+template <class T, class Allocator>
 inline List<T, Allocator>::iterator List<T, Allocator>::insert(
     typename List<T, Allocator>::const_iterator pos, const T& value) {
-  iterator it( const_cast<iterator::node_pointer>(pos.ptr));
+  iterator it(const_cast<iterator::node_pointer>(pos.ptr));
   Node* prev = it.ptr->prev;
   NODE_CREATE(it.ptr->prev, value, prev, it.ptr);
   prev->next = it.ptr->prev;
