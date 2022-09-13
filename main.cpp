@@ -166,6 +166,17 @@ void testVect() {
   }
 }
 
+void testCopyList() {
+  std::cout << "----Test copy List----\n";
+  List<A> l1;
+  l1.push_back(A("A"));
+  List<A> l2;
+  std::cout << "--List::opertor=--\n";
+  l2 = l1;
+  l1.front().print();
+  l2.front().print();
+}
+
 int main() {
   std::cout << "------start test------\n";
   try {
@@ -175,6 +186,7 @@ int main() {
     testAobj();
     testVect();
     testIteratorCast();
+    testCopyList();
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';

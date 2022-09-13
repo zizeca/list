@@ -49,8 +49,8 @@ class List {
   List(List&& other);
 
   // asing move
-  T& operator=(const List& other);
-  T& operator=(List&& other);
+  List& operator=(const List& other);
+  List& operator=(List&& other);
 
   // dctor
   ~List();
@@ -144,19 +144,21 @@ List<T, Allocator>::List(List&& other) : List() {
 }
 
 template <class T, class Allocator>
-T& List<T, Allocator>::operator=(const List& other) {
-  if (other == *this) return *this;
+List<T,Allocator>& List<T, Allocator>::operator=(const List& other) {
+  if (other.p_head == this->p_head) return *this;
   this->clear();
-  for (auto it = other.cbegin(); it != cend(); ++it) {
+  for (auto it = other.cbegin(); it != other.cend(); ++it) {
     this->push_back(*it);
   }
+  return *this;
 }
 
 template <class T, class Allocator>
-T& List<T, Allocator>::operator=(List&& other) {
-  if (other == *this) return *this;
+List<T, Allocator>& List<T, Allocator>::operator=(List&& other) {
+  if (other.p_head == this->p_head) return *this;
   std::swap(other.p_head, p_head);
   std::swap(other.sz, sz);
+  return this;
 }
 
 template <class T, class Allocator>
@@ -378,12 +380,12 @@ inline void List<T, Allocator>::pop_front() {
 
 template <class T, class Allocator>
 inline T& List<T, Allocator>::front() {
-  return p_head->next->t;
+  return p_head->next->value;
 }
 
 template <class T, class Allocator>
 inline T& List<T, Allocator>::back() {
-  return p_head->prev->t;
+  return p_head->prev->value;
 }
 
 template <class T, class Allocator>
