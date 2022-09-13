@@ -109,6 +109,7 @@ class List {
   // end iterator
 
   iterator insert(const_iterator pos, const T& value);
+  iterator insert(const_iterator pos, T&& value);
 
   void push_back(const T& value);
   void push_back(T&& value);
@@ -309,6 +310,16 @@ inline List<T, Allocator>::iterator List<T, Allocator>::insert(
   iterator it(const_cast<iterator::node_pointer>(pos.ptr));
   Node* prev = it.ptr->prev;
   NODE_CREATE(it.ptr->prev, value, prev, it.ptr);
+  prev->next = it.ptr->prev;
+  return iterator(it.ptr->prev);
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::iterator List<T, Allocator>::insert(
+    typename List<T, Allocator>::const_iterator pos, T&& value) {
+  iterator it(const_cast<iterator::node_pointer>(pos.ptr));
+  Node* prev = it.ptr->prev;
+  NODE_CREATE(it.ptr->prev, std::move(value), prev, it.ptr);
   prev->next = it.ptr->prev;
   return iterator(it.ptr->prev);
 }
