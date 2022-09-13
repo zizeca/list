@@ -11,7 +11,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <list>
+// #include <list>
 #include <memory>
 
 #include "List.hpp"
@@ -27,12 +27,12 @@ struct A {
   }
   A& operator=(const A& other) {
     str = other.str;
-    std::cout << " copy assigned " << str << "\n";
+    std::cout << "A operator= copy assigned" << str << "\n";
     return *this;
   }
   A& operator=(A&& other) {
     str = std::move(other.str);
-    std::cout << " move assigned " << str << "\n";
+    std::cout << "A operator=move assigned" << str << "\n";
     return *this;
   }
 
@@ -50,6 +50,7 @@ struct B {
 };
 
 void testIteratorCast() {
+  std::cout << "----Test cast pointer----\n";
   List<A> l;
   l.push_back(A("1"));
   l.push_back(A("2"));
@@ -57,13 +58,16 @@ void testIteratorCast() {
   List<A>::iterator it = l.begin();
   List<A>::const_iterator cit = it;
   cit->print();
-  List<A>::iterator it2 = cit;
-  it2->print();
+  *it = A("3");
+  // List<A>::iterator it2 = cit; // error
+  // it2->print();
+
 }
 
 void testAobj() {
+  std::cout << "----Test A object----\n";
   List<A> l;
-  std::cout << "\npush back test\n";
+  std::cout << "--push back test--\n";
   for (int i = 0; i < 5; i++) {
     l.push_back(A("push_back=" + std::to_string(i)));
   }
@@ -81,7 +85,7 @@ void testAobj() {
   ins = l.insert(ins, A("Insert"));
   ins->print();
 
-  std::cout << "\ncall print with const_iterator\n";
+  std::cout << "--call print with const_iterator--\n";
   //*
   for (auto it = l.cbegin(); it != l.cend(); ++it) {
     it->print();  // print use const_iterator
@@ -90,17 +94,17 @@ void testAobj() {
 }
 
 void testAobj_1() {
+  std::cout << "----Test A object one time----\n";
   List<A> l;
-  std::cout << "\npush back test\n";
-
   l.push_back(A("test"));
   A a("test2");
   l.push_back(a);
 }
 
 void testBobj() {
+  std::cout << "----Test B object----\n";
   List<B> l;
-  std::cout << "\npush back test\n";
+  std::cout << "--push back test--\n";
   for (int i = 0; i < 5; i++) {
     l.push_back(B(i));
   }
@@ -111,54 +115,46 @@ void testBobj() {
     l.push_back(ct);
   }
 
-  std::cout << "\ncall print with const_iterator\n";
+  std::cout << "--call print with const_iterator--\n";
   for (auto it = l.cbegin(); it != l.cend(); it++) {
     it->print();  // print use const_iterator
   }
 }
 
-void testBobj_1() {
-  List<B> l;
-  //*
-  for (size_t i = 0; i < 10; i++) {
-    l.push_back(B(i));
-  }
-  //*/
 
-  for (auto it = l.cbegin(); it != l.cend(); ++it) {
-    it->print();
-  }
-  l.push_back(B(1));
-  l.pop_back();
-  std::cout << "pop\n";
-}
 
 void testuptr() {
-  std::unique_ptr<A> p(new A("uptr"));
-
+  std::cout << "----Test std::unique_ptr<A>----\n";
+  std::unique_ptr<A> p1(new A("uptr1"));
+  std::unique_ptr<A> p2(new A("uptr2"));
+  std::unique_ptr<A> p3(new A("uptr3"));
   List<std::unique_ptr<A>> l;
-  l.push_back(std::move(p));
+  l.push_back(std::move(p1));
+  l.push_back(std::move(p2));
+  l.pop_front();
+  l.push_front(std::move(p3));
 }
 
 void testVect() {
-  std::vector<B> v(5);
-  std::vector<B> v2(5);
+  std::cout << "----Test std::vector<B>----\n";
+  std::vector<B> v;
+  std::vector<B> v2;
 
-  std::cout << "\n\t fill vector\n";
+  std::cout << "--fill vector--\n";
   for (size_t i = 0; i < 5; i++) {
     v.push_back(B(i));
   }
 
   for (size_t i = 5; i < 10; i++) {
-    v.push_back(B(i));
+    v2.push_back(B(i));
   }
 
-  std::cout << "push to list\n";
+  std::cout << "--push to list--\n";
   List<std::vector<B>> l;
   l.push_back(v2);
   l.push_front(v);
 
-  std::cout << "print list\n";
+  std::cout << "--print list--\n";
   for (auto it = l.cbegin(); it != l.cend(); it++) {
     for (auto j = it->cbegin(); j != it->cend(); ++j) {
       j->print();
@@ -167,9 +163,10 @@ void testVect() {
 }
 
 int main() {
+  std::cout << "------start test------\n";
   try {
     testAobj_1();
-    testBobj_1();
+    testBobj();
     testuptr();
     testAobj();
     testVect();
@@ -179,7 +176,7 @@ int main() {
     std::cerr << e.what() << '\n';
   }
 
-  std::cout << "\nend test\n";
+  std::cout << "------end test------\n";
 
   return 0;
 }

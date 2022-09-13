@@ -69,14 +69,13 @@ class List {
     using node_pointer = std::conditional_t<_is_const, const Node*, Node*>;
 
    private:
-    node_pointer ptr = p_head;
+    node_pointer ptr=nullptr;
 
    public:
     common_iterator() = default;
     explicit common_iterator(Node* node) : ptr(node) {}
     common_iterator(const common_iterator& other) = default;
-    template <bool B>
-    common_iterator(const common_iterator<B>& other); // = default;
+
 
     reference operator*() const;                          // { return ptr->value; }
     pointer operator->() const;                           // { return &(ptr->value); }
@@ -87,8 +86,7 @@ class List {
     common_iterator& operator--();    // {ptr = ptr->prev; return *this;}
     common_iterator operator--(int);  // {common_iterator ret = *this; ptr = ptr->prev; return ret;}
 
-    template<bool B>
-    operator common_iterator<B>();
+    operator common_iterator<true>();
   };
 
   using iterator = common_iterator<false>;
@@ -161,14 +159,6 @@ List<T, Allocator>::~List() {
 
 template <class T, class Allocator>
 template <bool _is_const>
-template <bool B>
-List<T, Allocator>::common_iterator<_is_const>::common_iterator(
-    const List<T, Allocator>::common_iterator<B>& other) {
-  ptr = other.ptr;
-}
-
-template <class T, class Allocator>
-template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>::reference
 List<T, Allocator>::common_iterator<_is_const>::operator*() const {
   return ptr->value;
@@ -222,9 +212,8 @@ List<T, Allocator>::common_iterator<_is_const>::operator--() {
 
 template <class T, class Allocator>
 template <bool _is_const>
-template <bool B>
-List<T, Allocator>::common_iterator<_is_const>::operator List<T, Allocator>::common_iterator<B>() {
-  return common_iterator<B>(const_cast<Node*>(ptr));
+List<T, Allocator>::common_iterator<_is_const>::operator List<T, Allocator>::common_iterator<true>() {
+  return common_iterator<true>(ptr);
 }
 
 template <class T, class Allocator>
@@ -273,7 +262,7 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::cend() const noexc
 template <class T, class Allocator>
 inline List<T, Allocator>::iterator List<T, Allocator>::insert(
     typename List<T, Allocator>::const_iterator pos, const T& value) {
-  iterator it(pos);
+  iterator it( const_cast<iterator::node_pointer>(pos.ptr));
   Node* prev = it.ptr->prev;
   NODE_CREATE(it.ptr->prev, value, prev, it.ptr);
   prev->next = it.ptr->prev;
