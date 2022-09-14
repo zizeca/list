@@ -13,6 +13,7 @@
 #include <iostream>
 // #include <list>
 #include <memory>
+#include <iterator>
 
 #include "List.hpp"
 
@@ -177,6 +178,27 @@ void testCopyList() {
   l2.front().print();
 }
 
+void testErase() {
+  std::cout << "----Test erase----\n";
+  List<A> l;
+  for (int i = 0; i < 10; i++) {
+    l.push_back(A("push_back=" + std::to_string(i)));
+    }
+
+    List<A>::iterator it = l.begin();
+    List<A>::iterator it2 = l.begin();
+
+    std::advance(it, 2);
+    std::advance(it2, 6);
+    it->print();
+    std::cout << "-erase one-\n";
+    it = l.erase(it);
+    it->print();
+    std::cout << "-erase some-\n";
+    it = l.erase(it, it2);
+    it->print();
+}
+
 int main() {
   std::cout << "------start test------\n";
   try {
@@ -187,6 +209,7 @@ int main() {
     testVect();
     testIteratorCast();
     testCopyList();
+    testErase();
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';

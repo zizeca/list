@@ -32,10 +32,12 @@ class List {
 
 #define NODE_CREATE(ptr, val, prev, next) \
   ptr = traits_t::allocate(m_alloc, 1u);  \
-  traits_t::construct(m_alloc, ptr, val, prev, next)
-#define NODE_DESTROY(ptr)          \
-  traits_t::destroy(m_alloc, ptr); \
-  traits_t::deallocate(m_alloc, ptr, 1u)
+  traits_t::construct(m_alloc, ptr, val, prev, next); \
+  ++sz
+#define NODE_DESTROY(ptr)                 \
+  traits_t::destroy(m_alloc, ptr);        \
+  traits_t::deallocate(m_alloc, ptr, 1u); \
+  --sz
 
   // start end fake obj
   Node* p_head;
@@ -43,6 +45,15 @@ class List {
   size_t sz = 0;
 
  public:
+  using value_type = T;
+  using allocator_type = Allocator;
+  using size_type = std::size_t;
+  using difference_type = std::ptrdiff_t;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using pointer = std::allocator_traits<Allocator>::pointer;
+  using const_pointer = std::allocator_traits<Allocator>::const_pointer;
+
   // ctors
   List();
   List(const List& other);
@@ -108,6 +119,9 @@ class List {
   const_reverse_iterator rcend() const noexcept;
   // end iterator
 
+  iterator erase(const_iterator pos);
+  iterator erase(const_iterator first, const_iterator last);
+
   iterator insert(const_iterator pos, const T& value);
   iterator insert(const_iterator pos, T&& value);
 
@@ -117,9 +131,18 @@ class List {
   void push_front(const T& value);
   void push_front(T&& value);
   void pop_front();
-  T& front();
-  T& back();
+
+ private:  // NOLINT
+  void push_back(const_iterator first, const_iterator last);
+
+ public:  // NOLINT
+  reference front() noexcept;
+  const_reference front() const noexcept;
+  reference back() noexcept;
+  const_reference back() const noexcept;
+
   size_t size() const noexcept;
+  bool empty() const noexcept;
   void clear() noexcept;
 };
 
@@ -132,9 +155,8 @@ List<T, Allocator>::List() {
 
 template <class T, class Allocator>
 List<T, Allocator>::List(const List& other) : List() {
-  for (auto it = other.cbegin(); it != cend(); ++it) {
-    this->push_back(*it);
-  }
+  clear();
+  push_back(other.cbegin(), other.cend());
 }
 
 template <class T, class Allocator>
@@ -144,12 +166,10 @@ List<T, Allocator>::List(List&& other) : List() {
 }
 
 template <class T, class Allocator>
-List<T,Allocator>& List<T, Allocator>::operator=(const List& other) {
+List<T, Allocator>& List<T, Allocator>::operator=(const List& other) {
   if (other.p_head == this->p_head) return *this;
-  this->clear();
-  for (auto it = other.cbegin(); it != other.cend(); ++it) {
-    this->push_back(*it);
-  }
+  clear();
+  push_back(other.cbegin(), other.cend());
   return *this;
 }
 
@@ -158,7 +178,7 @@ List<T, Allocator>& List<T, Allocator>::operator=(List&& other) {
   if (other.p_head == this->p_head) return *this;
   std::swap(other.p_head, p_head);
   std::swap(other.sz, sz);
-  return this;
+  return *this;
 }
 
 template <class T, class Allocator>
@@ -307,6 +327,32 @@ List<T, Allocator>::rcend() const noexcept {
 }
 
 template <class T, class Allocator>
+inline List<T, Allocator>::iterator List<T, Allocator>::erase(
+    typename List<T, Allocator>::const_iterator pos) {
+  iterator i(const_cast<iterator::node_pointer>(pos.ptr));
+  if (pos.ptr == p_head) return i;
+
+  i.ptr->prev->next = i.ptr->next;  // change prev node
+  i.ptr->next->prev = i.ptr->prev;  // change next node
+  iterator ret(i.ptr->next);        // return iterator
+  NODE_DESTROY(i.ptr);
+  return ret;
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::iterator List<T, Allocator>::erase(
+    typename List<T, Allocator>::const_iterator first,
+    typename List<T, Allocator>::const_iterator last) {
+  iterator i(const_cast<iterator::node_pointer>(first.ptr));
+  if (first.ptr == p_head || last == first) return i;
+
+  for (auto it = first; it != last;) {
+    it = erase(it);
+  }
+  return iterator(const_cast<iterator::node_pointer>(last.ptr));
+}
+
+template <class T, class Allocator>
 inline List<T, Allocator>::iterator List<T, Allocator>::insert(
     typename List<T, Allocator>::const_iterator pos, const T& value) {
   iterator it(const_cast<iterator::node_pointer>(pos.ptr));
@@ -331,7 +377,6 @@ inline void List<T, Allocator>::push_back(const T& value) {
   Node* tmp = p_head->prev;
   NODE_CREATE(tmp->next, value, tmp, p_head);
   p_head->prev = tmp->next;
-  ++sz;
 }
 
 template <class T, class Allocator>
@@ -339,7 +384,7 @@ inline void List<T, Allocator>::push_back(T&& value) {
   Node* tmp = p_head->prev;
   NODE_CREATE(tmp->next, std::move(value), tmp, p_head);
   p_head->prev = tmp->next;
-  ++sz;
+
 }
 
 template <class T, class Allocator>
@@ -349,7 +394,7 @@ inline void List<T, Allocator>::pop_back() {
   d->prev->next = p_head;
   p_head->prev = d->prev;
   NODE_DESTROY(d);
-  --sz;
+
 }
 
 template <class T, class Allocator>
@@ -357,7 +402,7 @@ inline void List<T, Allocator>::push_front(const T& value) {
   Node* tmp = p_head->next;
   NODE_CREATE(tmp->prev, value, p_head, tmp);
   p_head->next = tmp->prev;
-  ++sz;
+
 }
 
 template <class T, class Allocator>
@@ -365,7 +410,7 @@ inline void List<T, Allocator>::push_front(T&& value) {
   Node* tmp = p_head->next;
   NODE_CREATE(tmp->prev, std::move(value), p_head, tmp);
   p_head->next = tmp->prev;
-  ++sz;
+
 }
 
 template <class T, class Allocator>
@@ -375,22 +420,45 @@ inline void List<T, Allocator>::pop_front() {
   d->next->prev = p_head;
   p_head->next = d->next;
   NODE_DESTROY(d);
-  --sz;
+
 }
 
 template <class T, class Allocator>
-inline T& List<T, Allocator>::front() {
+inline void List<T, Allocator>::push_back(List<T, Allocator>::const_iterator first,
+                                          List<T, Allocator>::const_iterator last) {
+  for (auto it = first; it != last; ++it) {
+    this->push_back(*it);
+  }
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::reference List<T, Allocator>::front() noexcept {
   return p_head->next->value;
 }
 
 template <class T, class Allocator>
-inline T& List<T, Allocator>::back() {
+inline List<T, Allocator>::const_reference List<T, Allocator>::front() const noexcept {
+  return p_head->next->value;
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::reference List<T, Allocator>::back() noexcept {
+  return p_head->prev->value;
+}
+
+template <class T, class Allocator>
+inline List<T, Allocator>::const_reference List<T, Allocator>::back() const noexcept {
   return p_head->prev->value;
 }
 
 template <class T, class Allocator>
 inline size_t List<T, Allocator>::size() const noexcept {
   return sz;
+}
+
+template <class T, class Allocator>
+inline bool List<T, Allocator>::empty() const noexcept {
+  return !static_cast<bool>(sz);
 }
 
 template <class T, class Allocator>
