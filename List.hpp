@@ -24,15 +24,21 @@ class List {
     T value;
     Node* prev;
     Node* next;
+
+    Node(Node* prev, Node* next, const T& t) : value(t), prev(prev), next(next) {}
+    Node(Node* prev, Node* next, T&& t) : value(std::move(t)), prev(prev), next(next) {}
+    template <class... Args>
+    Node(Node* prev, Node* next, Args&&... args)
+        : value(args...), prev(prev), next(next) {}
   };
 
   // typename std::allocator_traits<Allocator>::template rebind_alloc<Node> m_alloc;
   typename std::allocator_traits<Allocator>::rebind_alloc<Node> m_alloc;
   using traits_t = std::allocator_traits<decltype(m_alloc)>;
 
-#define NODE_CREATE(ptr, val, prev, next) \
-  ptr = traits_t::allocate(m_alloc, 1u);  \
-  traits_t::construct(m_alloc, ptr, val, prev, next); \
+#define NODE_CREATE(ptr, prev, next, val)           \
+  ptr = traits_t::allocate(m_alloc, 1u);              \
+  traits_t::construct(m_alloc, ptr, prev, next, val); \
   ++sz
 #define NODE_DESTROY(ptr)                 \
   traits_t::destroy(m_alloc, ptr);        \
@@ -124,6 +130,9 @@ class List {
 
   iterator insert(const_iterator pos, const T& value);
   iterator insert(const_iterator pos, T&& value);
+
+  template <class... Args>
+  reference emplace_back(Args&&... args);
 
   void push_back(const T& value);
   void push_back(T&& value);
@@ -357,7 +366,7 @@ inline List<T, Allocator>::iterator List<T, Allocator>::insert(
     typename List<T, Allocator>::const_iterator pos, const T& value) {
   iterator it(const_cast<iterator::node_pointer>(pos.ptr));
   Node* prev = it.ptr->prev;
-  NODE_CREATE(it.ptr->prev, value, prev, it.ptr);
+  NODE_CREATE(it.ptr->prev, prev, it.ptr, value);
   prev->next = it.ptr->prev;
   return iterator(it.ptr->prev);
 }
@@ -367,24 +376,32 @@ inline List<T, Allocator>::iterator List<T, Allocator>::insert(
     typename List<T, Allocator>::const_iterator pos, T&& value) {
   iterator it(const_cast<iterator::node_pointer>(pos.ptr));
   Node* prev = it.ptr->prev;
-  NODE_CREATE(it.ptr->prev, std::move(value), prev, it.ptr);
+  NODE_CREATE(it.ptr->prev, prev, it.ptr, std::forward<T>(value));
   prev->next = it.ptr->prev;
   return iterator(it.ptr->prev);
 }
 
 template <class T, class Allocator>
+template <class... Args>
+T& List<T, Allocator>::emplace_back(Args&&... args) {
+  Node* tmp = p_head->prev;
+  NODE_CREATE(tmp->next, tmp, p_head, std::forward<Args&&>(args)...);
+  p_head->prev = tmp->next;
+  return back();
+}
+
+template <class T, class Allocator>
 inline void List<T, Allocator>::push_back(const T& value) {
   Node* tmp = p_head->prev;
-  NODE_CREATE(tmp->next, value, tmp, p_head);
+  NODE_CREATE(tmp->next, tmp, p_head, value);
   p_head->prev = tmp->next;
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_back(T&& value) {
   Node* tmp = p_head->prev;
-  NODE_CREATE(tmp->next, std::move(value), tmp, p_head);
+  NODE_CREATE(tmp->next, tmp, p_head, std::forward<T>(value));
   p_head->prev = tmp->next;
-
 }
 
 template <class T, class Allocator>
@@ -394,23 +411,20 @@ inline void List<T, Allocator>::pop_back() {
   d->prev->next = p_head;
   p_head->prev = d->prev;
   NODE_DESTROY(d);
-
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_front(const T& value) {
   Node* tmp = p_head->next;
-  NODE_CREATE(tmp->prev, value, p_head, tmp);
+  NODE_CREATE(tmp->prev, p_head, tmp, value);
   p_head->next = tmp->prev;
-
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_front(T&& value) {
   Node* tmp = p_head->next;
-  NODE_CREATE(tmp->prev, std::move(value), p_head, tmp);
+  NODE_CREATE(tmp->prev, p_head, tmp, std::forward<T>(value));
   p_head->next = tmp->prev;
-
 }
 
 template <class T, class Allocator>
@@ -420,7 +434,6 @@ inline void List<T, Allocator>::pop_front() {
   d->next->prev = p_head;
   p_head->next = d->next;
   NODE_DESTROY(d);
-
 }
 
 template <class T, class Allocator>

@@ -11,9 +11,9 @@
 
 #include <algorithm>
 #include <iostream>
-// #include <list>
-#include <memory>
+#include <list>
 #include <iterator>
+#include <memory>
 
 #include "List.hpp"
 
@@ -95,15 +95,18 @@ void testAobj() {
     it->print();  // print use const_iterator
   }
   //*/
-
 }
 
 void testAobj_1() {
   std::cout << "----Test A object one time----\n";
   List<A> l;
   l.push_back(A("test"));
-  A a("test2");
-  l.push_back(a);
+  // A a("test2");
+  // l.push_back(a);
+
+  std::cout << "--compare std::list--\n";
+  std::list<A> sl;
+  sl.push_back(A("std test"));
 }
 
 void testBobj() {
@@ -125,8 +128,6 @@ void testBobj() {
     it->print();  // print use const_iterator
   }
 }
-
-
 
 void testuptr() {
   std::cout << "----Test std::unique_ptr<A>----\n";
@@ -183,33 +184,41 @@ void testErase() {
   List<A> l;
   for (int i = 0; i < 10; i++) {
     l.push_back(A("push_back=" + std::to_string(i)));
-    }
+  }
 
-    List<A>::iterator it = l.begin();
-    List<A>::iterator it2 = l.begin();
+  List<A>::iterator it = l.begin();
+  List<A>::iterator it2 = l.begin();
 
-    std::advance(it, 2);
-    std::advance(it2, 6);
-    it->print();
-    std::cout << "-erase one-\n";
-    it = l.erase(it);
-    it->print();
-    std::cout << "-erase some-\n";
-    it = l.erase(it, it2);
-    it->print();
+  std::advance(it, 2);
+  std::advance(it2, 6);
+  it->print();
+  std::cout << "-erase one-\n";
+  it = l.erase(it);
+  it->print();
+  std::cout << "-erase some-\n";
+  it = l.erase(it, it2);
+  it->print();
+}
+
+void testEmplace() {
+  std::cout << "----Test emplace----\n";
+  List<A> l;
+  // std::list<A> l;
+  l.emplace_back("test emplace");
 }
 
 int main() {
   std::cout << "------start test------\n";
   try {
     testAobj_1();
-    testBobj();
+    //testBobj();
     testuptr();
-    testAobj();
-    testVect();
-    testIteratorCast();
-    testCopyList();
-    testErase();
+    // testAobj();
+   //testVect();
+   //testIteratorCast();
+    //testCopyList();
+    //testErase();
+    testEmplace();
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
