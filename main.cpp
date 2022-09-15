@@ -11,8 +11,8 @@
 
 #include <algorithm>
 #include <iostream>
-#include <list>
 #include <iterator>
+#include <list>
 #include <memory>
 
 #include "List.hpp"
@@ -204,20 +204,23 @@ void testEmplace() {
   std::cout << "----Test emplace----\n";
   List<A> l;
   // std::list<A> l;
-  l.emplace_back("test emplace");
+  l.emplace_back("test emplace back");
+  // l.push_front(A("test push front"));
+  l.emplace_front("test emplace front");
+  l.emplace_back("test emplace back2 and print").print();
 }
 
 int main() {
   std::cout << "------start test------\n";
   try {
-    testAobj_1();
-    //testBobj();
+    // testAobj_1();
+    // testBobj();
     testuptr();
     // testAobj();
-   //testVect();
-   //testIteratorCast();
-    //testCopyList();
-    //testErase();
+    // testVect();
+    // testIteratorCast();
+    // testCopyList();
+    // testErase();
     testEmplace();
 
   } catch (const std::exception& e) {

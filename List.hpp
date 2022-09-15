@@ -134,6 +134,9 @@ class List {
   template <class... Args>
   reference emplace_back(Args&&... args);
 
+  template <class... Args>
+  reference emplace_front(Args&&... args);
+
   void push_back(const T& value);
   void push_back(T&& value);
   void pop_back();
@@ -387,6 +390,15 @@ T& List<T, Allocator>::emplace_back(Args&&... args) {
   Node* tmp = p_head->prev;
   NODE_CREATE(tmp->next, tmp, p_head, std::forward<Args&&>(args)...);
   p_head->prev = tmp->next;
+  return back();
+}
+
+template <class T, class Allocator>
+template <class... Args>
+T& List<T, Allocator>::emplace_front(Args&&... args) {
+  Node* tmp = p_head->next;
+  NODE_CREATE(tmp->prev, p_head, tmp, std::forward<Args&&>(args)...);
+  p_head->next = tmp->prev;
   return back();
 }
 
