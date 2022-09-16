@@ -99,14 +99,24 @@ void testAobj() {
 
 void testAobj_1() {
   std::cout << "----Test A object one time----\n";
-  List<A> l;
-  l.push_back(A("test"));
-  // A a("test2");
-  // l.push_back(a);
+  std::cout << "--test push_back copy--\n";
+  {
+    List<A> l;
+    A a{"push1"};
+    l.push_back(a);
+  }
 
-  std::cout << "--compare std::list--\n";
+  std::cout << "--test push_back move--\n";
+  {
+    List<A> l;
+    l.push_back(A("move"));
+  }
+
+  ///*
+  std::cout << "--compare whith std::list--\n";
   std::list<A> sl;
   sl.push_back(A("std test"));
+  //*/
 }
 
 void testBobj() {
@@ -119,8 +129,10 @@ void testBobj() {
   l.push_front(B(-1));
 
   {
+    // c++ const fail
     const B ct(50);
     l.push_back(ct);
+    l.back().i = 20;
   }
 
   std::cout << "--call print with const_iterator--\n";
@@ -213,14 +225,14 @@ void testEmplace() {
 int main() {
   std::cout << "------start test------\n";
   try {
-    // testAobj_1();
-    // testBobj();
+    testAobj_1();
+    testBobj();
     testuptr();
-    // testAobj();
-    // testVect();
-    // testIteratorCast();
-    // testCopyList();
-    // testErase();
+    testAobj();
+    testVect();
+    testIteratorCast();
+    testCopyList();
+    testErase();
     testEmplace();
 
   } catch (const std::exception& e) {
