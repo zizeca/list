@@ -222,6 +222,22 @@ void testEmplace() {
   l.emplace_back("test emplace back2 and print").print();
 }
 
+void testInsertIt() {
+  std::cout << "----Test insertIt----\n";
+  List<B> l;
+  std::vector<B> v;
+  for (int i = 0; i != 5; ++i) {
+    v.emplace_back(i);
+  }
+
+  std::cout << "--insert--\n";
+  l.insert(l.cend(), v.begin(), v.end());
+  std::cout << "--clean vector--\n";
+  v.clear();
+  std::cout << "--clean LIST--\n";
+  l.clear();
+}
+
 int main() {
   std::cout << "------start test------\n";
   try {
@@ -234,6 +250,7 @@ int main() {
     testCopyList();
     testErase();
     testEmplace();
+    testInsertIt();
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
