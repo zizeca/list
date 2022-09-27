@@ -31,8 +31,8 @@ class List {
  private:
   struct Node {
     T value;
-    Node* prev;
-    Node* next;
+    Node* prev = this;
+    Node* next = this;
   } * root_node_p;
 
   // typename std::allocator_traits<Allocator>::template rebind_alloc<Node>
@@ -41,16 +41,6 @@ class List {
   typename std::allocator_traits<Allocator>::rebind_alloc<Node> node_alloc;
   using traits_node = std::allocator_traits<decltype(node_alloc)>;
   using traits_vtype = std::allocator_traits<Allocator>;
-
-  /**
-   * @brief Allocate memory for node before the current (ptr),
-   * and changes all the corresponding pointers without call constructor.
-   * @param ptr Pointer to the node in front of a new node
-   * (the alocated node will be inserted and ptr->prev = the allocated node).
-   * @return Node* Return new unconstructed node with correct pointers
-   * to the next and previous node.
-   */
-  Node* insertNode(Node* const ptr);
 
   /**
    * @brief Allocate memory for node before the current (ptr),
@@ -185,27 +175,29 @@ class List {
 };
 
 template <class T, class Allocator>
-List<T, Allocator>::Node* List<T, Allocator>::insertNode(
-    List<T, Allocator>::Node* const ptr) {
-  Node* newnode =
-      traits_node::allocate(node_alloc, 1);  // empty nonconstruct node
-  newnode->prev = ptr->prev;
-  newnode->next = ptr;
-  ptr->prev->next = newnode;
-  ptr->prev = newnode;
-  ++sz;
-  return newnode;
-}
-
-template <class T, class Allocator>
 template <class... Args>
 List<T, Allocator>::Node* List<T, Allocator>::insertNode(
     List<T, Allocator>::Node* ptr, Args&&... args) {
-  Node* p = insertNode(ptr);  // allocate node without construction
-  traits_vtype::construct(vtype_alloc, reinterpret_cast<T*>(p),
-                          std::forward<Args>(args)...);
-  assert(p->next == ptr);
-  return p;  // now p->next == ptr
+  // allocate
+  Node* const newnode = traits_node::allocate(node_alloc, 1);
+
+  // construct
+  try {
+    traits_vtype::construct(vtype_alloc, &newnode->value, std::forward<Args>(args)...);
+  } catch (...) {
+    traits_node::deallocate(node_alloc, newnode, 1);
+    throw;
+  }
+
+  // insert
+  newnode->next = ptr;
+  newnode->prev = ptr->prev;
+  ptr->prev->next = newnode;
+  ptr->prev = newnode;
+
+  // change count
+  ++sz;
+  return newnode;  // now newnode->next == ptr
 }
 
 template <class T, class Allocator>
@@ -213,8 +205,7 @@ List<T, Allocator>::Node* List<T, Allocator>::eraseNode(
     List<T, Allocator>::Node* ptr) {
   if (ptr == root_node_p) return ptr;  // root_node_p
   Node* ret = ptr->next;
-  traits_vtype::destroy(vtype_alloc,
-                        reinterpret_cast<T*>(ptr));  // ptr->value now not valid
+  traits_vtype::destroy(vtype_alloc, &ptr->value);  // ptr->value now not valid
   ptr->prev->next = ptr->next;
   ptr->next->prev = ptr->prev;
   traits_node::deallocate(node_alloc, ptr, 1);
