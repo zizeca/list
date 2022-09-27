@@ -16,6 +16,16 @@
 #include <iterator>
 #include <memory>
 #include <utility>
+
+namespace _priv {
+struct BaseNode {
+  BaseNode* prev = this;
+  BaseNode* next = this;
+  void hook(BaseNode* node) noexcept;
+  void unhook() noexcept;
+};
+}  // namespace _priv
+
 template <class T, class Allocator = std::allocator<T>>
 class List {
  public:  // NOLINT
@@ -29,16 +39,18 @@ class List {
   using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
  private:
-  struct Node {
+  struct Node : _priv::BaseNode {
     T value;
+    /*
     Node* prev = this;
     Node* next = this;
     void hook(Node* node) noexcept;
     void unhook() noexcept;
-  } * root_node_p;
+    */
+  };  // *root_node_p;
 
-  // typename std::allocator_traits<Allocator>::template rebind_alloc<Node>
-  // node_alloc; allocator traits
+  _priv::BaseNode m_root;
+
   Allocator vtype_alloc;
   typename std::allocator_traits<Allocator>::rebind_alloc<Node> node_alloc;
   using traits_node = std::allocator_traits<decltype(node_alloc)>;
@@ -176,6 +188,24 @@ class List {
   void clear() noexcept;
 };
 
+namespace _priv {
+
+void BaseNode::hook(BaseNode* node) noexcept {
+  next = node;
+  prev = node->prev;
+  node->prev->next = this;
+  node->prev = this;
+}
+
+void BaseNode::unhook() noexcept {
+  prev->next = next;
+  next->prev = prev;
+  prev = nullptr;
+  next = nullptr;
+}
+}  // namespace _priv
+
+/*
 template <class T, class Allocator>
 void List<T, Allocator>::Node::hook(List<T, Allocator>::Node* node) noexcept {
   next = node;
@@ -185,13 +215,13 @@ void List<T, Allocator>::Node::hook(List<T, Allocator>::Node* node) noexcept {
 }
 
 template <class T, class Allocator>
-void List<T, Allocator>::Node::unhook() noexcept{
+void List<T, Allocator>::Node::unhook() noexcept {
   prev->next = next;
   next->prev = prev;
   prev = nullptr;
   next = nullptr;
 }
-
+*/
 template <class T, class Allocator>
 template <class... Args>
 List<T, Allocator>::Node* List<T, Allocator>::insertNode(
@@ -218,8 +248,8 @@ List<T, Allocator>::Node* List<T, Allocator>::insertNode(
 template <class T, class Allocator>
 List<T, Allocator>::Node* List<T, Allocator>::eraseNode(
     List<T, Allocator>::Node* ptr) {
-  if (ptr == root_node_p) return ptr;  // root_node_p
-  Node* ret = ptr->next;
+  if (ptr == &m_root) return ptr;  // root_node_p
+  Node* ret = static_cast<Node*>(ptr->next);
   traits_vtype::destroy(vtype_alloc, &ptr->value);  // ptr->value now not valid
   ptr->unhook();
   traits_node::deallocate(node_alloc, ptr, 1);
@@ -229,9 +259,8 @@ List<T, Allocator>::Node* List<T, Allocator>::eraseNode(
 
 template <class T, class Allocator>
 List<T, Allocator>::List() {
-  root_node_p = traits_node::allocate(node_alloc, 1u);
-  root_node_p->next = root_node_p;
-  root_node_p->prev = root_node_p;
+  m_root.prev = &m_root;
+  m_root.next = &m_root;
 }
 
 template <class T, class Allocator>
@@ -244,15 +273,16 @@ List<T, Allocator>::List(const List& other) : List() {
 
 template <class T, class Allocator>
 List<T, Allocator>::List(List&& other) : List() {
+  clear();
   std::swap(node_alloc, other.node_alloc);
   std::swap(vtype_alloc, other.vtype_alloc);
-  std::swap(root_node_p, other.root_node_p);
+  std::swap(m_root, other.m_root);
   std::swap(sz, other.sz);
 }
 
 template <class T, class Allocator>
 List<T, Allocator>& List<T, Allocator>::operator=(const List& other) {
-  if (other.root_node_p == this->root_node_p) return *this;
+  if (&other.m_root == &this->m_root) return *this;
   clear();
   push_back(other.cbegin(), other.cend());
   return *this;
@@ -260,18 +290,18 @@ List<T, Allocator>& List<T, Allocator>::operator=(const List& other) {
 
 template <class T, class Allocator>
 List<T, Allocator>& List<T, Allocator>::operator=(List&& other) {
-  if (other.root_node_p == this->root_node_p) return *this;
-  std::swap(other.node_alloc, node_alloc);
-  std::swap(other.vtype_alloc, vtype_alloc);
-  std::swap(other.root_node_p, root_node_p);
-  std::swap(other.sz, sz);
+  if (&other.m_root == &this->m_root) return *this;
+  clear();
+  std::swap(node_alloc, other.node_alloc);
+  std::swap(vtype_alloc, other.vtype_alloc);
+  std::swap(m_root, other.m_root);
+  std::swap(sz, other.sz);
   return *this;
 }
 
 template <class T, class Allocator>
 List<T, Allocator>::~List() {
   clear();
-  traits_node::deallocate(node_alloc, root_node_p, 1u);
 }
 
 template <class T, class Allocator>
@@ -306,7 +336,7 @@ template <class T, class Allocator>
 template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>&
 List<T, Allocator>::common_iterator<_is_const>::operator++() {
-  ptr = ptr->next;
+  ptr = static_cast<Node*>(ptr->next);
   return *this;
 }
 
@@ -315,7 +345,7 @@ template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>
 List<T, Allocator>::common_iterator<_is_const>::operator++(int) {
   common_iterator ret = *this;
-  ptr = ptr->next;
+  ptr = static_cast<Node*>(ptr->next);
   return ret;
 }
 
@@ -323,7 +353,7 @@ template <class T, class Allocator>
 template <bool _is_const>
 inline List<T, Allocator>::common_iterator<_is_const>&
 List<T, Allocator>::common_iterator<_is_const>::operator--() {
-  ptr = ptr->prev;
+  ptr = static_cast<Node*>(ptr->prev);
   return *this;
 }
 
@@ -345,7 +375,7 @@ List<T, Allocator>::common_iterator<_is_const>::operator--(int) {
 
 template <class T, class Allocator>
 List<T, Allocator>::iterator List<T, Allocator>::begin() noexcept {
-  iterator i(root_node_p->next);
+  iterator i(static_cast<Node*>(m_root.next));
   return i;
 }
 
@@ -358,13 +388,13 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::begin()
 template <class T, class Allocator>
 inline List<T, Allocator>::const_iterator List<T, Allocator>::cbegin()
     const noexcept {
-  const_iterator i(root_node_p->next);
+  const_iterator i(static_cast<Node*>(m_root.next));
   return i;
 }
 
 template <class T, class Allocator>
 inline List<T, Allocator>::iterator List<T, Allocator>::end() noexcept {
-  iterator i(root_node_p);
+  iterator i(static_cast<Node*>(&m_root));
   return i;
 }
 
@@ -377,7 +407,7 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::end()
 template <class T, class Allocator>
 inline List<T, Allocator>::const_iterator List<T, Allocator>::cend()
     const noexcept {
-  const_iterator i(root_node_p);
+  const_iterator i( const_cast<Node*>(static_cast<const Node*>(&m_root)));
   return i;
 }
 
@@ -427,7 +457,7 @@ template <class T, class Allocator>
 inline List<T, Allocator>::iterator List<T, Allocator>::erase(typename List<T, Allocator>::const_iterator first,
                                                               typename List<T, Allocator>::const_iterator last) {
   iterator i(const_cast<iterator::node_pointer>(first.ptr));
-  if (first.ptr == root_node_p || last == first) return i;
+  if (first.ptr == static_cast<Node*>(&m_root) || last == first) return i;
 
   for (auto it = first; it != last;) {
     it = erase(it);
@@ -456,7 +486,7 @@ std::enable_if_t<std::is_convertible_v<typename std::iterator_traits<InputIt>::i
                  typename List<T, Allocator>::iterator>
 List<T, Allocator>::insert(typename List<T, Allocator>::const_iterator pos, InputIt first, InputIt last) {
   Node* p = const_cast<Node*>(pos.ptr);
-  iterator ret(p->prev);
+  iterator ret(static_cast<Node*>(p->prev));
   for (auto it = first; it != last; ++it) {
     insertNode(p, *it);
   }
@@ -466,45 +496,45 @@ List<T, Allocator>::insert(typename List<T, Allocator>::const_iterator pos, Inpu
 template <class T, class Allocator>
 template <class... Args>
 T& List<T, Allocator>::emplace_back(Args&&... args) {
-  insertNode(root_node_p, std::forward<Args>(args)...);
+  insertNode(static_cast<Node*>(&m_root), std::forward<Args>(args)...);
   return back();
 }
 
 template <class T, class Allocator>
 template <class... Args>
 T& List<T, Allocator>::emplace_front(Args&&... args) {
-  insertNode(root_node_p->next, std::forward<Args>(args)...);
+  insertNode(static_cast<Node*>(m_root.next), std::forward<Args>(args)...);
   return back();
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_back(const T& value) {
-  insertNode(root_node_p, value);
+  insertNode(static_cast<Node*>(&m_root), value);
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_back(T&& value) {
-  insertNode(root_node_p, std::forward<T>(value));
+  insertNode(static_cast<Node*>(&m_root), std::move(value));
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::pop_back() {
-  eraseNode(root_node_p->prev);
+  eraseNode(static_cast<Node*>(m_root.prev));
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_front(const T& value) {
-  insertNode(root_node_p->next, value);
+  insertNode(static_cast<Node*>(m_root.next), value);
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::push_front(T&& value) {
-  insertNode(root_node_p->next, std::forward<T>(value));
+  insertNode(static_cast<Node*>(m_root.next), std::forward<T>(value));
 }
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::pop_front() {
-  eraseNode(root_node_p->next);
+  eraseNode(static_cast<Node*>(m_root.next));
 }
 
 template <class T, class Allocator>
@@ -518,24 +548,23 @@ inline void List<T, Allocator>::push_back(
 
 template <class T, class Allocator>
 inline List<T, Allocator>::reference List<T, Allocator>::front() noexcept {
-  return root_node_p->next->value;
+  return static_cast<Node*>(m_root.next)->value;
 }
 
 template <class T, class Allocator>
-inline List<T, Allocator>::const_reference List<T, Allocator>::front()
-    const noexcept {
-  return root_node_p->next->value;
+inline List<T, Allocator>::const_reference List<T, Allocator>::front() const noexcept {
+  return static_cast<Node*>(m_root.next)->value;
 }
 
 template <class T, class Allocator>
 inline List<T, Allocator>::reference List<T, Allocator>::back() noexcept {
-  return root_node_p->prev->value;
+  return static_cast<Node*>(m_root.prev)->value;
 }
 
 template <class T, class Allocator>
 inline List<T, Allocator>::const_reference List<T, Allocator>::back()
     const noexcept {
-  return root_node_p->prev->value;
+  return static_cast<Node*>(m_root.prev)->value;
 }
 
 template <class T, class Allocator>
