@@ -33,6 +33,8 @@ class List {
     T value;
     Node* prev = this;
     Node* next = this;
+    void hook(Node* node) noexcept;
+    void unhook() noexcept;
   } * root_node_p;
 
   // typename std::allocator_traits<Allocator>::template rebind_alloc<Node>
@@ -175,6 +177,22 @@ class List {
 };
 
 template <class T, class Allocator>
+void List<T, Allocator>::Node::hook(List<T, Allocator>::Node* node) noexcept {
+  next = node;
+  prev = node->prev;
+  node->prev->next = this;
+  node->prev = this;
+}
+
+template <class T, class Allocator>
+void List<T, Allocator>::Node::unhook() noexcept{
+  prev->next = next;
+  next->prev = prev;
+  prev = nullptr;
+  next = nullptr;
+}
+
+template <class T, class Allocator>
 template <class... Args>
 List<T, Allocator>::Node* List<T, Allocator>::insertNode(
     List<T, Allocator>::Node* ptr, Args&&... args) {
@@ -190,10 +208,7 @@ List<T, Allocator>::Node* List<T, Allocator>::insertNode(
   }
 
   // insert
-  newnode->next = ptr;
-  newnode->prev = ptr->prev;
-  ptr->prev->next = newnode;
-  ptr->prev = newnode;
+  newnode->hook(ptr);
 
   // change count
   ++sz;
@@ -206,8 +221,7 @@ List<T, Allocator>::Node* List<T, Allocator>::eraseNode(
   if (ptr == root_node_p) return ptr;  // root_node_p
   Node* ret = ptr->next;
   traits_vtype::destroy(vtype_alloc, &ptr->value);  // ptr->value now not valid
-  ptr->prev->next = ptr->next;
-  ptr->next->prev = ptr->prev;
+  ptr->unhook();
   traits_node::deallocate(node_alloc, ptr, 1);
   --sz;
   return ret;
