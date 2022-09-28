@@ -23,8 +23,8 @@ template <typename T>
 struct Node;  // forward decl
 
 struct BaseNode {
-  BaseNode* prev = this;
-  BaseNode* next = this;
+  BaseNode* prev;
+  BaseNode* next;
 
   /// add <this BaseNode> before <node> in the chain of noeds
   void hook(BaseNode* node) noexcept;
@@ -60,9 +60,10 @@ class List {
   using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
  private:
+  using BaseNode = _priv::BaseNode;
   using Node = _priv::Node<T>;
-  _priv::BaseNode m_root;
 
+  BaseNode m_root;
   Allocator vtype_alloc;
   typename std::allocator_traits<Allocator>::rebind_alloc<Node> node_alloc;
   using traits_node = std::allocator_traits<decltype(node_alloc)>;
@@ -186,10 +187,6 @@ class List {
   void push_front(T&& value);
   void pop_front();
 
- private:  // NOLINT
-  void push_back(const_iterator first, const_iterator last);
-
- public:  // NOLINT
   reference front() noexcept;
   const_reference front() const noexcept;
   reference back() noexcept;
@@ -295,25 +292,40 @@ List<T, Allocator>::List(const Allocator& allocator)
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::List(const List& other) : List(other.vtype_alloc) {
+List<T, Allocator>::List(const List& other) {
   clear();
-  push_back(other.cbegin(), other.cend());
+  vtype_alloc = other.vtype_alloc;
+  node_alloc = typename std::allocator_traits<decltype(vtype_alloc)>::rebind_alloc<Node>();
+  try {
+    insert(end(), other.cbegin(), other.cend());
+  } catch (...) {
+    clear();
+    throw;
+  }
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::List(List&& other) : List() {
+List<T, Allocator>::List(List&& other) {
   clear();
-  std::swap(node_alloc, other.node_alloc);
-  std::swap(vtype_alloc, other.vtype_alloc);
-  std::swap(m_root, other.m_root);
+  vtype_alloc = std::move(other.vtype_alloc);
+  node_alloc = std::move(typename std::allocator_traits<decltype(vtype_alloc)>::rebind_alloc<Node>());
+  BaseNode::swap(m_root, other.m_root);
   std::swap(sz, other.sz);
 }
 
 template <class T, class Allocator>
 List<T, Allocator>& List<T, Allocator>::operator=(const List& other) {
+  //? need save prevous state?
   if (&other.m_root == &this->m_root) return *this;
   clear();
-  push_back(other.cbegin(), other.cend());
+  vtype_alloc = other.vtype_alloc;
+  node_alloc = typename std::allocator_traits<decltype(vtype_alloc)>::rebind_alloc<Node>();
+  try {
+    insert(end(), other.cbegin(), other.cend());
+  } catch (...) {
+    clear();
+    throw;
+  }
   return *this;
 }
 
@@ -321,9 +333,9 @@ template <class T, class Allocator>
 List<T, Allocator>& List<T, Allocator>::operator=(List&& other) {
   if (&other.m_root == &this->m_root) return *this;
   clear();
-  std::swap(node_alloc, other.node_alloc);
-  std::swap(vtype_alloc, other.vtype_alloc);
-  std::swap(m_root, other.m_root);
+  vtype_alloc = std::move(other.vtype_alloc);
+  node_alloc = std::move(typename std::allocator_traits<decltype(vtype_alloc)>::rebind_alloc<Node>());
+  BaseNode::swap(m_root, other.m_root);
   std::swap(sz, other.sz);
   return *this;
 }
@@ -567,15 +579,6 @@ inline void List<T, Allocator>::pop_front() {
 }
 
 template <class T, class Allocator>
-inline void List<T, Allocator>::push_back(
-    List<T, Allocator>::const_iterator first,
-    List<T, Allocator>::const_iterator last) {
-  for (auto it = first; it != last; ++it) {
-    this->push_back(*it);
-  }
-}
-
-template <class T, class Allocator>
 inline List<T, Allocator>::reference List<T, Allocator>::front() noexcept {
   return static_cast<Node*>(m_root.next)->value;
 }
@@ -608,7 +611,7 @@ inline bool List<T, Allocator>::empty() const noexcept {
 
 template <class T, class Allocator>
 inline void List<T, Allocator>::clear() noexcept {
-  while (sz) this->pop_back();
+  while (sz) this->pop_front();
 }
 
 #endif  // _LIST_HPP_
