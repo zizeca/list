@@ -1,16 +1,11 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -Wpedantic -std=c++20 -g 
-#LDFLAGS =  -fsanitize=address
-
-SRC = $(wildcard *.cpp)
-HSRC = $(wildcard *.hpp)
-OBJ = $(SRC:.cpp=.o)
 EXEC = test
+SRC = main.cpp
+HRC = List.hpp
 
-all: $(EXEC) $(HSRC)
-
-$(EXEC): $(OBJ)
-	$(CXX) $(LDFLAGS) -o $@ $(OBJ) $(LBLIBS)
+all: $(SRC) $(HRC)
+	$(CXX) $(CXXFLAGS) -o $(EXEC) $(SRC)
 
 clean:
-	rm -rf $(OBJ) $(EXEC)
+	rm -rf *.o $(EXEC)
