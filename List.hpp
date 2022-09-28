@@ -21,8 +21,17 @@ namespace _priv {
 struct BaseNode {
   BaseNode* prev = this;
   BaseNode* next = this;
+
+  /// add <this BaseNode> before <node> in the chain of noeds
   void hook(BaseNode* node) noexcept;
+
+  /// remove a link from the chain of nodes
   void unhook() noexcept;
+
+  /// Swaps the fields in values a and b
+  static void swap(BaseNode& a, BaseNode& b) noexcept;
+
+  void initToThis();
 };
 }  // namespace _priv
 
@@ -81,9 +90,9 @@ class List {
 
  public:
   // ctors
-  List();
-  List(const List& other);
-  List(List&& other);
+  explicit List(const Allocator& allocator = Allocator());
+  explicit List(const List& other);
+  explicit List(List&& other);
 
   // asing move
   List& operator=(const List& other);
@@ -203,6 +212,24 @@ void BaseNode::unhook() noexcept {
   prev = nullptr;
   next = nullptr;
 }
+
+void BaseNode::swap(BaseNode& a, BaseNode& b) noexcept {
+  BaseNode* tmp;
+  tmp = (a.prev != &a) ? (a.prev) : (&b);     // this pointer fix
+  a.prev = (b.prev != &b) ? (b.prev) : (&a);  // this pointer fix
+  b.prev = tmp;
+
+  tmp = (a.next != &a) ? (a.next) : (&b);     // this pointer fix
+  a.next = (b.next != &b) ? (b.next) : (&a);  // this pointer fix
+  b.next = tmp;
+
+  //   std::swap(a.prev, b.prev);  // if point to "this" then UB
+  //   std::swap(a.next, b.next);  // if point to "this" then UB
+}
+
+void BaseNode::initToThis() {
+  prev = next = this;
+}
 }  // namespace _priv
 
 /*
@@ -258,16 +285,15 @@ List<T, Allocator>::Node* List<T, Allocator>::eraseNode(
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::List() {
-  m_root.prev = &m_root;
-  m_root.next = &m_root;
+List<T, Allocator>::List(const Allocator& allocator)
+    : vtype_alloc(allocator),
+      node_alloc(typename std::allocator_traits<Allocator>::rebind_alloc<Node>()) {
+  m_root.initToThis();
 }
 
 template <class T, class Allocator>
-List<T, Allocator>::List(const List& other) : List() {
+List<T, Allocator>::List(const List& other) : List(other.vtype_alloc) {
   clear();
-  node_alloc = other.node_alloc;
-  vtype_alloc = other.vtype_alloc;
   push_back(other.cbegin(), other.cend());
 }
 
@@ -407,7 +433,7 @@ inline List<T, Allocator>::const_iterator List<T, Allocator>::end()
 template <class T, class Allocator>
 inline List<T, Allocator>::const_iterator List<T, Allocator>::cend()
     const noexcept {
-  const_iterator i( const_cast<Node*>(static_cast<const Node*>(&m_root)));
+  const_iterator i(const_cast<Node*>(static_cast<const Node*>(&m_root)));
   return i;
 }
 
