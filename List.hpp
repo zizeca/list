@@ -18,6 +18,10 @@
 #include <utility>
 
 namespace _priv {
+
+template <typename T>
+struct Node;  // forward decl
+
 struct BaseNode {
   BaseNode* prev = this;
   BaseNode* next = this;
@@ -31,8 +35,16 @@ struct BaseNode {
   /// Swaps the fields in values a and b
   static void swap(BaseNode& a, BaseNode& b) noexcept;
 
-  void initToThis();
+  void initToThis() noexcept;
+
+  // unsafe cast
 };
+
+template <typename T>
+struct Node : _priv::BaseNode {
+  T value;
+};
+
 }  // namespace _priv
 
 template <class T, class Allocator = std::allocator<T>>
@@ -48,16 +60,7 @@ class List {
   using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
  private:
-  struct Node : _priv::BaseNode {
-    T value;
-    /*
-    Node* prev = this;
-    Node* next = this;
-    void hook(Node* node) noexcept;
-    void unhook() noexcept;
-    */
-  };  // *root_node_p;
-
+  using Node = _priv::Node<T>;
   _priv::BaseNode m_root;
 
   Allocator vtype_alloc;
@@ -215,19 +218,19 @@ void BaseNode::unhook() noexcept {
 
 void BaseNode::swap(BaseNode& a, BaseNode& b) noexcept {
   BaseNode* tmp;
-  tmp = (a.prev != &a) ? (a.prev) : (&b);     // this pointer fix
-  a.prev = (b.prev != &b) ? (b.prev) : (&a);  // this pointer fix
+  tmp = (a.prev != &a) ? (a.prev) : (&b);     // "this" pointer fix
+  a.prev = (b.prev != &b) ? (b.prev) : (&a);  // "this" pointer fix
   b.prev = tmp;
 
-  tmp = (a.next != &a) ? (a.next) : (&b);     // this pointer fix
-  a.next = (b.next != &b) ? (b.next) : (&a);  // this pointer fix
+  tmp = (a.next != &a) ? (a.next) : (&b);     // "this" pointer fix
+  a.next = (b.next != &b) ? (b.next) : (&a);  // "this" pointer fix
   b.next = tmp;
 
   //   std::swap(a.prev, b.prev);  // if point to "this" then UB
   //   std::swap(a.next, b.next);  // if point to "this" then UB
 }
 
-void BaseNode::initToThis() {
+void BaseNode::initToThis() noexcept {
   prev = next = this;
 }
 }  // namespace _priv
